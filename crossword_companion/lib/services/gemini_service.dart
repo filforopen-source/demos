@@ -37,6 +37,7 @@ class GeminiService {
         Tool.functionDeclarations([
           _getWordMetadataFunction,
           _returnResultFunction,
+          _resolveConflictFunction,
         ]),
       ],
     );
@@ -76,6 +77,24 @@ class GeminiService {
     },
   );
 
+  static final _resolveConflictFunction = FunctionDeclaration(
+    'resolveConflict',
+    'Asks the user to resolve a conflict between the letter pattern and the '
+        'proposed answer. Use this BEFORE calling returnResult if the answer you '
+        'want to propose does not match the letter pattern.',
+    parameters: {
+      'proposedAnswer': Schema(
+        SchemaType.string,
+        description: 'The answer the LLM wants to suggest.',
+      ),
+      'pattern': Schema(
+        SchemaType.string,
+        description: 'The current letter pattern from the grid.',
+      ),
+      'clue': Schema(SchemaType.string, description: 'The clue text.'),
+    },
+  );
+
   static String get clueSolverSystemInstruction =>
       '''
 You are an expert crossword puzzle solver.
@@ -85,8 +104,9 @@ You are an expert crossword puzzle solver.
 2.  **Match the Clue:** Ensure your answer strictly matches the clue's tense, plurality (singular vs. plural), and part of speech.
 3.  **Verify Grammatically:** If a clue implies a specific part of speech (e.g., it's a verb, adverb, or plural), it's a good idea to use the `getWordMetadata` tool to verify your candidate answer matches. However, avoid using it for every clue.
 4.  **Be Confident:** Provide a confidence score from 0.0 to 1.0 indicating your certainty.
-5.  **Trust the Clue Over the Pattern:** The provided letter pattern is only a suggestion based on other potentially incorrect answers. Your primary goal is to find the best word that fits the **clue text**. If you are confident in an answer that contradicts the provided pattern, you should use that answer.
-6.  **Format Correctly:** You must return your answer in the specified JSON format.
+5.  **Trust the Clue Over the Pattern:** The provided letter pattern is only a suggestion based on other potentially incorrect answers. Your primary goal is to find the best word that fits the **clue text**.
+6.  **Resolve Conflicts:** If the answer you are confident in conflicts with the provided `pattern`, you **MUST** use the `resolveConflict` tool to ask the user for the correct answer. Use the result of `resolveConflict` as your final answer.
+7.  **Format Correctly:** You must return your answer in the specified JSON format.
 
 ---
 
@@ -122,6 +142,20 @@ must use this tool exactly once, and only once, to return the final result.
 **Function signature:**
 ```json
 ${jsonEncode(_returnResultFunction.toJson())}
+```
+
+### Tool: `resolveConflict`
+
+You have a tool to ask the user to resolve a conflict.
+
+**When to use:**
+- Use this tool **BEFORE** `returnResult` if your proposed answer conflicts with the provided letter pattern.
+- For example, if the pattern is `_ R _ Y` and you want to suggest `RENT` (which fits the clue), there is a conflict at the second letter (`R` vs `E`). You should call `resolveConflict(proposedAnswer: "RENT", pattern: "_ R _ Y", clue: "...")`.
+- The tool will return the user's decision (either your proposed answer or a new one). You should then use that result to call `returnResult`.
+
+**Function signature:**
+```json
+${jsonEncode(_resolveConflictFunction.toJson())}
 ```
 ''';
 
@@ -242,7 +276,13 @@ The JSON schema is as follows: ${jsonEncode(_crosswordSchema.toJson())}
   // Buffer for the result of the clue solving process.
   final _returnResult = <String, dynamic>{};
 
-  Future<ClueAnswer?> solveClue(Clue clue, int length, String pattern) async {
+  Future<ClueAnswer?> solveClue(
+    Clue clue,
+    int length,
+    String pattern, {
+    Future<String> Function(String clue, String proposedAnswer, String pattern)?
+    onConflict,
+  }) async {
     // Cancel any previous, in-flight request.
     await cancelCurrentSolve();
 
@@ -257,6 +297,10 @@ The JSON schema is as follows: ${jsonEncode(_crosswordSchema.toJson())}
           functionCall.args['word'] as String,
         ),
         'returnResult' => _cacheReturnResult(functionCall.args),
+        'resolveConflict' => await _handleResolveConflict(
+          functionCall.args,
+          onConflict,
+        ),
         _ => throw Exception('Unknown function call: ${functionCall.name}'),
       },
     );
@@ -289,6 +333,23 @@ The JSON schema is as follows: ${jsonEncode(_crosswordSchema.toJson())}
     assert(_returnResult.isEmpty, 'The return result cache is not empty.');
     _returnResult.addAll(returnResult);
     return {'status': 'success'};
+  }
+
+  Future<Map<String, dynamic>> _handleResolveConflict(
+    Map<String, dynamic> args,
+    Future<String> Function(String clue, String proposedAnswer, String pattern)?
+    onConflict,
+  ) async {
+    final proposedAnswer = args['proposedAnswer'] as String;
+    final pattern = args['pattern'] as String;
+    final clue = args['clue'] as String;
+
+    if (onConflict != null) {
+      final result = await onConflict(clue, proposedAnswer, pattern);
+      return {'result': result};
+    }
+
+    return {'result': proposedAnswer};
   }
 
   String getSolverPrompt(Clue clue, int length, String pattern) =>
