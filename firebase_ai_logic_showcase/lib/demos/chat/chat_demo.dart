@@ -48,7 +48,7 @@ class _ChatDemoState extends ConsumerState<ChatDemo> {
   @override
   void initState() {
     super.initState();
-    final model = geminiModels.selectModel('gemini-2.5-flash');
+    final model = geminiModels.selectModel('gemini-3.5-flash');
     _chatService = ChatService(ref, model);
     _chatService.init();
     _userTextInputController.text =

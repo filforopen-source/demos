@@ -71,11 +71,11 @@ between different Gemini models.
 - **Attach an image (optional):** Tap the "Image" icon to select an image 
 from your gallery to send with your message.
 - **View conversation:** Your messages and Gemini's responses will appear in the chat history.
-- **Use tools with function calling:** With `gemini-2.5-flash` (selected by default), 
+- **Use tools with function calling:** With `gemini-3.5-flash` (selected by default),
 you can ask Gemini to use the two tools that are built into the demo: 
     - Generate an image using Imagen (e.g., "generate an image of a cat") or 
     - Change the color of the app (e.g., "change the color to blue").
-- **Nano Banana**  With `gemini-2.5-flash-image`, you can generate and edit images. 
+- **Nano Banana**  With `gemini-3.1-flash-image-preview`, you can generate and edit images.
     - **Generate an image:** Enter a text prompt and generate a new image.
     - **Edit an image:** Provide instructions for Gemini to edit a previously generated image or select one from your photo library. 
 
