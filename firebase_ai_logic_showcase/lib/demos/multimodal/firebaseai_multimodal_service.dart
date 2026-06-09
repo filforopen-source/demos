@@ -27,7 +27,7 @@ import 'models/attachment.dart';
 /// https://firebase.google.com/docs/ai-logic/generate-text?api=dev#base64
 class MultimodalService {
   final _model = FirebaseAI.googleAI().generativeModel(
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.5-flash',
   );
 
   /// Generates text content from a text prompt and a file attachment.
