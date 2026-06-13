@@ -26,7 +26,7 @@ class CalendarHomePage extends StatefulWidget {
 
 class _CalendarHomePageState extends State<CalendarHomePage> {
   bool _hasCalendarPermission = false;
-  List<String> _events = [];
+  List<Map<String, String>> _events = [];
   late final EKEventStore _eventStore;
 
   @override
@@ -58,9 +58,7 @@ class _CalendarHomePageState extends State<CalendarHomePage> {
   }
 
   void _createEvent() {
-    setState(() {
-      _events.add('Sample Event ${_events.length + 1}');
-    });
+    setState(() {});
   }
 
   void _retrieveEvents() {
@@ -91,7 +89,15 @@ class _CalendarHomePageState extends State<CalendarHomePage> {
 
     setState(() {
       _events = fetchedEvents.map((e) {
-        return e.title.toDartString();
+        final title = e.title.toDartString();
+        final dt = e.startDate.toDateTime();
+        return {
+          'title': title,
+          'date':
+              '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}',
+          'time':
+              '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}',
+        };
       }).toList();
     });
   }
@@ -135,12 +141,19 @@ class _CalendarHomePageState extends State<CalendarHomePage> {
                   : SingleChildScrollView(
                       child: DataTable(
                         columns: const [
-                          DataColumn(label: Text('Event Details')),
+                          DataColumn(label: Text('Title')),
+                          DataColumn(label: Text('Date')),
+                          DataColumn(label: Text('Time')),
                         ],
                         rows: _events
                             .map(
-                              (event) =>
-                                  DataRow(cells: [DataCell(Text(event))]),
+                              (event) => DataRow(
+                                cells: [
+                                  DataCell(Text(event['title'] ?? '')),
+                                  DataCell(Text(event['date'] ?? '')),
+                                  DataCell(Text(event['time'] ?? '')),
+                                ],
+                              ),
                             )
                             .toList(),
                       ),
