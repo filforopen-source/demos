@@ -1,0 +1,99 @@
+rules_version='2'
+
+service cloud.firestore {
+    match /databases/{database}/documents {
+        function isValidSweetener(sweetener) {
+            return sweetener in get(/databases/$(database)/documents/latteOptions/sweeteners).data.values || sweetener == null;
+        }
+
+        function isValidMilk(milk) {
+            return milk in get(/databases/$(database)/documents/latteOptions/milks).data.values || milk == null;
+        }
+
+        function isKiosk() {
+            return request.auth != null && request.auth.token.kiosk == true;
+        }
+
+        function isModerator() {
+            return request.auth != null && request.auth.token.moderator == true;
+        }
+
+        function isQueue() {
+            return request.auth != null && request.auth.token.queue == true;
+        }
+
+        function isRecent() {
+            return request.auth != null && request.auth.token.recent == true;
+        }
+
+        function isBarista() {
+            return request.auth != null && request.auth.token.barista == true;
+        }
+
+        function onlyHasStringName(data) {
+            return data.keys().hasOnly(['name', 'milk', 'sweetener', 'happyPlace', 'imageUrl'])
+                && data.name is string;
+        }
+
+        function kioskAllowedModification(data) {
+            return data.keys().hasOnly(['name', 'milk', 'sweetener', 'happyPlace', 'imageUrl', 'orderNumber', 'expiresAt'])
+                && data.name is string &&
+            (!('milk' in data) || isValidMilk(data.milk)) &&
+            (!('sweetener' in data) || isValidSweetener(data.sweetener)) &&
+            (!('happyPlace' in data) || data.happyPlace is string || data.happyPlace == null) &&
+            (!('imageUrl' in data) || data.imageUrl is string || data.imageUrl == null);
+        }
+
+        function baristaAllowedModification(data) {
+            return data.keys().hasOnly(['name', 'milk', 'sweetener', 'happyPlace', 'imageUrl', 'expiresAt']) && 
+            (!('name' in data) || data.name is string) &&
+            (!('milk' in data) || isValidMilk(data.milk)) &&
+            (!('sweetener' in data) || isValidSweetener(data.sweetener)) &&
+            (!('happyPlace' in data) || data.happyPlace is string || data.happyPlace == null) &&
+            (!('imageUrl' in data) || data.imageUrl is string || data.imageUrl == null);
+        }
+
+        match /latteOrders/{orderId} {
+            allow read: if isKiosk() || isBarista() || isModerator() || isQueue(); // prevents annonymous auth from reading
+            allow create: if isKiosk() && onlyHasStringName(request.resource.data);
+            allow delete: if isBarista();
+            allow update: if (isKiosk() && kioskAllowedModification(request.resource.data))
+                || (isBarista());
+        }
+
+        match /baristas/{baristaId} {
+            allow read: if isBarista() || isModerator();
+            allow write: if isBarista();
+        }
+
+        match /latteOptions/{optionId} {
+            allow read: if true;
+            allow write: if isModerator();
+        }
+
+        match /latteImageBatches/{batchId} {
+            allow read: if isKiosk() || isBarista();
+            allow write: if isBarista();
+        }
+
+        match /latteOrderMetadata/{orderId} {
+            allow read: if isKiosk() || isBarista() || isModerator() || isQueue();
+            allow write: if isBarista() || isModerator();
+        }
+
+        match /recentLatteImages/{imageId} {
+            allow read: if isRecent();
+            allow write: if false;
+        }
+
+        match /machines/{machineId} {
+            allow read: if isBarista() || isModerator();
+            allow write: if isModerator();
+        }
+
+        // Default deny for all other collections
+        match /{document=**} {
+            allow read, write: if false;
+        }
+    }
+}

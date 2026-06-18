@@ -1,0 +1,14 @@
+{
+    "flutter": {
+        "platforms": {
+            "dart": {
+                "lib/firebase_options.dart": {
+                    "projectId": "gcdemos-26-int-dd-latteart",
+                    "configurations": {
+                        "web": "1:177381243786:web:dea75ce782190ef7f6e673"
+                    }
+                }
+            }
+        }
+    }
+}

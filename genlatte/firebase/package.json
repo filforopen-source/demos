@@ -1,0 +1,20 @@
+{
+  "name": "firebase",
+  "version": "1.0.0",
+  "description": "",
+  "main": "create_users.js",
+  "scripts": {
+    "test": "firebase emulators:exec --project demo-latteart-rules --only firestore 'mocha tests/**/*.test.js'"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.0",
+    "firebase": "^12.10.0",
+    "firebase-admin": "^13.7.0",
+    "firebase-tools": "^15.10.1",
+    "mocha": "^11.7.5"
+  }
+}
