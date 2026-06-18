@@ -1,0 +1,15 @@
+import { DEFAULT_POWERUP_PROMPT } from "./powerup";
+import { DEFAULT_MODERATION_PROMPT } from "./moderation";
+import { DEFAULT_DESCRIPTION_PROMPT } from "./description";
+import { DEFAULT_QUESTION_GEN_PROMPT } from "./reviserQuestion";
+import { DEFAULT_SLIDER_VALUE_GEN_PROMPT } from "./reviserSlider";
+import { DEFAULT_TEXT_VALUE_GEN_PROMPT } from "./reviserText";
+
+export { 
+    DEFAULT_POWERUP_PROMPT, 
+    DEFAULT_MODERATION_PROMPT,
+    DEFAULT_DESCRIPTION_PROMPT,
+    DEFAULT_QUESTION_GEN_PROMPT,
+    DEFAULT_SLIDER_VALUE_GEN_PROMPT,
+    DEFAULT_TEXT_VALUE_GEN_PROMPT
+};

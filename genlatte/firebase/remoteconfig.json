@@ -1,0 +1,74 @@
+{
+    "parameters": {
+        "IMAGE_PARALLELISM": {
+            "defaultValue": {
+                "value": "4"
+            },
+            "valueType": "NUMBER",
+            "description": "How many images we should be generating at once."
+        },
+        "NUM_SHARDS_BRANCH_SUFFIX": {
+            "defaultValue": {
+                "value": "1"
+            },
+            "valueType": "NUMBER",
+            "description": "Number of shards for the order counter to avoid contention."
+        },
+        "MODERATION_PROMPT_BRANCH_SUFFIX": {
+            "defaultValue": {
+                "value": "You are an expert content moderation bot.\n\n**TASK**\nYour goal is to determine if a given string of text is inappropriate to be used as a username or \"Happy Place\".\n\n**CRITERIA FOR INAPPROPRIATE CONTENT**\nA string is considered inappropriate if it contains:\n1.  **Profanity:** Obscene or vulgar language.\n2.  **Hate Speech:** Attacks on individuals or groups based on identity.\n3.  **Glorification of Violence:** Promoting or celebrating violent acts.\n4.  **Trivialization of Tragedy:** Using historical atrocities or disasters in a trivial context (e.g., \"1945 Hiroshima\" as a happy place).\n5. **Contemporary issues:** Referencing current news cycle items, political figures, polarizing stories, etc\n\n**INSTRUCTIONS**\n- Analyze the input text.\n- If the text meets any of the criteria above, it is NOT allowed. Set `isAllowed` to `false` and provide a `moderationReason`.\n- If the text is acceptable, it IS allowed. Set `isAllowed` to `true` and provide an empty `moderationReason`.\n- Your output must be valid JSON matching the specified schema.\n\n**EXAMPLES**\n\nTEXT TO MODERATE: ASSMAN\n{\"isAccepted\": false, \"reason\": \"contains profane language\"}\n\nTEXT TO MODERATE: 1945 Hiroshima\n{\"isAccepted\": false, \"reason\": \"references historical tragedy\"}\n\nTEXT TO MODERATE: ground zero\n{\"isAccepted\": false, \"reason\": \"references historical tragedy\"}\n\nTEXT TO MODERATE: The beach at sunset\n{\"isAccepted\": true, \"reason\": null}\n\nTEXT TO MODERATE: White Power\n{\"isAccepted\": false, \"reason\": \"contains hate speech\"}\n\nTEXT TO MODERATE: Ted Bundy Fan\n{\"isAccepted\": false, \"reason\": \"references a historical crime\"}\n\nTEXT TO MODERATE: A pool party\n{\"isAccepted\": true, \"reason\": null}\n\nTEXT TO MODERATE: A little kids' pool party\n{\"isAccepted\": false, \"reason\": \"references kids\"}\n\nTEXT TO MODERATE: A high school football game\n{\"isAccepted\": false, \"reason\": \"references high school\"}\n\nTEXT TO MODERATE: A middle school choir concert\n{\"isAccepted\": false, \"reason\": \"references middle school\"}\n\nTEXT TO MODERATE: An elementary school play\n{\"isAccepted\": false, \"reason\": \"references elementary school\"}\n\nTEXT TO MODERATE: A Michigan football game\n{\"isAccepted\": true, \"reason\": null}\n\nTEXT TO MODERATE: A Real Madrid match\n{\"isAccepted\": true, \"reason\": null}\n\nTEXT TO MODEATE: ice\n{\"isAccepted\": false, \"reason\": \"contemporary hot topic\"}\n\nTEXT TO MODERATE: Vietnam\n{\"isAccepted\": true, \"reason\": null}\n\nTEXT TO MODERATE: Vietnam War\n{\"isAccepted\": false, \"reason\": \"references historical tragedy\"}\n\nTEXT TO MODERATE: Japan\n{\"isAccepted\": true, \"reason\": null}\n\nTEXT TO MODERATE: Imperial Japan\n{\"isAccepted\": false, \"reason\": \"references historical tragedy\"}\n\nTEXT TO MODERATE: Germany\n{\"isAccepted\": true, \"reason\": null}\n\nTEXT TO MODERATE: Nazi Germany\n{\"isAccepted\": false, \"reason\": \"references historical tragedy\"}\n\nTEXT TO MODERATE: Korea\n{\"isAccepted\": true, \"reason\": null}\n\nTEXT TO MODERATE: South Korea\n{\"isAccepted\": true, \"reason\": null}\n\nTEXT TO MODERATE: Korean War\n{\"isAccepted\": false, \"reason\": \"references historical tragedy\"}\n\nTEXT TO MODERATE: North Korea\n{\"isAccepted\": false, \"reason\": \"references contemporary geopolitical conflict\"}\n\nTEXT TO MODERATE: Iran\n{\"isAccepted\": false, \"reason\": \"references ongoing geopolitical conflict\"}\n\nTEXT TO MODERATE: Kyiv\n{\"isAccepted\": true, \"reason\": null}\n---\n\nTEXT TO MODERATE:"
+            },
+            "valueType": "STRING",
+            "description": "The prompt used to moderate free form text input for explicit content"
+        },
+        "DESCRIPTION_PROMPT_BRANCH_SUFFIX": {
+            "defaultValue": {
+                "value": ""
+            },
+            "valueType": "STRING",
+            "description": "Prompt for describing an image."
+        },
+        "QUESTION_GEN_PROMPT_BRANCH_SUFFIX": {
+            "defaultValue": {
+                "value": ""
+            },
+            "valueType": "STRING",
+            "description": "Prompt for revising image questions."
+        },
+        "SLIDER_VALUE_GEN_PROMPT_BRANCH_SUFFIX": {
+            "defaultValue": {
+                "value": ""
+            },
+            "valueType": "STRING",
+            "description": "Prompt for generating slider min/max values."
+        },
+        "TEXT_VALUE_GEN_PROMPT_BRANCH_SUFFIX": {
+            "defaultValue": {
+                "value": ""
+            },
+            "valueType": "STRING",
+            "description": "Prompt for generating text-based multiple choice values."
+        },
+        "POWERUP_PROMPT_BRANCH_SUFFIX": {
+            "defaultValue": {
+                "value": "Give me a prompt for a photo generation model that is extremely detailed and at least two paragraphs long. Refrain from showing any humans in the output images. Make it a flat vector illustration with a whimsical, minimalist aesthetic.\nKey characteristics include:\nGeometric Simplification: The landscape elements—such as the pine trees and bushes—are reduced to clean, angular, and stylized geometric shapes rather than realistic textures.\nPalette and Gradation: It utilizes a harmonious, soft-toned color palette. While the shapes are flat, the atmosphere is created through subtle linear gradients in the sky and soft, layered color blocking to suggest depth and light.\nContoured Line Work: The composition is defined by clean, consistent-weight outlines that give the characters and objects a structured, pop-up book quality.\nStylized Proportion: The subject exhibits \"chibi-adjacent\" or simplified character design, favoring clear, readable features and an expressive, cheerful personality over anatomical realism.\nGraphic Balance: There is a strong emphasis on intentional negative space and clean, rhythmic curves (such as the S-curve of the path), creating a balanced, orderly, and serene visual flow.\nPhoto image:\n"
+            },
+            "valueType": "STRING",
+            "description": "Prompt for image generation model."
+        },
+        "IMAGE_MODEL_BRANCH_SUFFIX": {
+            "defaultValue": {
+                "value": "gemini-3.1-flash-image-preview"
+            },
+            "valueType": "STRING",
+            "description": "Model used for prompt enhancement (e.g. text model)."
+        },
+        "TEXT_MODEL_BRANCH_SUFFIX": {
+            "defaultValue": {
+                "value": "gemini-3-flash-preview"
+            },
+            "valueType": "STRING",
+            "description": "Text model used for prompt powerup generation."
+        }
+    }
+}
