@@ -1,16 +1,15 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_ai/firebase_ai.dart';
+import 'package:genui_workshop/catalog/weather_card.dart';
+import 'package:genui_workshop/catalog/weather_input.dart';
 import 'package:genui_workshop/message_bubble.dart';
 import 'package:genui_workshop/genui_utils.dart';
-import 'package:genui_workshop/tool_calls.dart';
 import 'firebase_options.dart';
+
 import 'package:genui/genui.dart' hide TextPart;
 import 'package:genui/genui.dart' as genui;
-import 'catalog/weather_input.dart';
-import 'package:http/http.dart' as http;
+import 'package:genui_workshop/tool_calls.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,7 +23,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Just Today',
+      title: 'Weather Today',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       ),
@@ -56,20 +55,17 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     final model = FirebaseAI.googleAI().generativeModel(
-      //model: 'gemini-3.5-flash',
       model: 'gemini-3.1-flash-lite',
-      // tools that will call cloud functions
-      tools: [
-        Tool.functionDeclarations([fetchWeatherGeocodeTool]),
-      ],
     );
+    
     _chatSession = model.startChat();
 
     // Initialize the GenUI Catalog.
     // The genui package provides a default set of primitive widgets (like text
     // and basic buttons) out of the box using this class.
-    //catalog = BasicCatalogItems.asCatalog();
-    catalog = BasicCatalogItems.asCatalog().copyWith(newItems: [weatherInput]);
+    catalog = BasicCatalogItems.asCatalog().copyWith(
+      newItems: [weatherInput,weatherCard ],
+    );
 
     // Create a SurfaceController to manage the state of generated surfaces.
     _controller = SurfaceController(catalogs: [catalog]);
@@ -121,61 +117,6 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Future<void> _sendAndReceive(ChatMessage msg) async {
-    final buffer = StringBuffer();
-    Map<String, Object?>? userInputData;
-    // Reconstruct the message part fragments
-    for (final part in msg.parts) {
-      if (part.isUiInteractionPart) {
-        // Process the event
-        var actionJson =
-            jsonDecode(part.asUiInteractionPart!.interaction)
-                as Map<String, Object?>;
-        var action = actionJson["action"] as Map<String, Object?>;
-        var surfaceId = action["surfaceId"] as String;
-        userInputData = action;
-      } else if (part is genui.TextPart) {
-        buffer.write(part.text);
-      }
-    }
-
-    final text = buffer.toString();
-
-    // Send the string to Firebase AI Logic.
-    var response;
-    if (userInputData != null) {
-      response = await _chatSession.sendMessage(
-        Content.text(userInputData['context'].toString()),
-      );
-
-      final func = response.functionCalls?.first;
-      print(response.functionCalls?.first?.name);
-      print(response.functionCalls?.first?.args);
-      print(response.text);
-
-      // Call the Dart function.
-      // Get the location from the func call
-      final params = func.args;
-      final uri = Uri.parse(
-        fetchWeatherGeocodeUrl + "?location=${params['location']}",
-      );
-      final funcResponse = await http.get(uri);
-      print(funcResponse.body);
-
-      final jsonMap = jsonDecode(funcResponse.body);
-      //_transport.addChunk(funcResponse.body);
-      response = await _chatSession.sendMessage(
-        Content.functionResponse(func.name, jsonMap),
-      );
-    } else {
-      response = await _chatSession.sendMessage(Content.text(text));
-    }
-    if (response?.text?.isNotEmpty ?? false) {
-      // Feed the response back into GenUI's transportation layer
-      _transport.addChunk(response.text!);
-    }
-  }
-
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -195,7 +136,7 @@ class _MyHomePageState extends State<MyHomePage> {
     super.dispose();
   }
 
-  Future<void> _addMessage() async {
+Future<void> _addMessage() async {
     final text = _textController.text;
 
     if (text.trim().isEmpty) {
@@ -212,6 +153,34 @@ class _MyHomePageState extends State<MyHomePage> {
 
     // Send the user's input through GenUI instead of directly to Firebase.
     await _conversation.sendRequest(ChatMessage.user(text));
+  }
+
+    Future<void> _sendAndReceive(ChatMessage msg) async {
+    final buffer = StringBuffer();
+
+    // Reconstruct the message part fragments
+    for (final part in msg.parts) {
+      if (part.isUiInteractionPart) {
+        buffer.write(part.asUiInteractionPart!.interaction);
+        print(part.asUiInteractionPart!.interaction);
+      } else if (part is genui.TextPart) {
+        buffer.write(part.text);
+      }
+    }
+
+    if (buffer.isEmpty) {
+      return;
+    }
+
+    final text = buffer.toString();
+
+    // Send the string to Firebase AI Logic.
+    final response = await _chatSession.sendMessage(Content.text(text));
+
+    if (response.text?.isNotEmpty ?? false) {
+      // Feed the response back into GenUI's transportation layer
+      _transport.addChunk(response.text!);
+    }
   }
 
   @override
@@ -234,10 +203,11 @@ class _MyHomePageState extends State<MyHomePage> {
                       text: item.text,
                       isUser: item.isUser,
                     ),
-                    // New!
                     SurfaceItem() => Surface(
-                      surfaceContext: _controller.contextFor(item.surfaceId),
-                    ),
+            surfaceContext: _controller.contextFor(
+              item.surfaceId,
+            ),
+          ),
                   },
               ],
             ),

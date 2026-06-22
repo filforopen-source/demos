@@ -33,6 +33,6 @@ const systemInstruction = '''
   *   Respond to my suggestions for changes to date or location, if I have any.
 
   ## USER INTERFACE
-  * To request the location and date to retreive weather, create an instance of the WeatherInput
+  * To request the location to retreive weather, create an instance of the WeatherInput
   catalog item.
-  ''';
+''';

@@ -77,7 +77,7 @@ class WeatherInput extends StatefulWidget {
 
 class _WeatherInputState extends State<WeatherInput> {
   late TextEditingController _controller;
-  DateTime? selectedDate;
+  DateTime? selectedDate = DateTime.now();
 
   Future<void> _selectDate() async {
     final DateTime? pickedDate = await showDatePicker(
@@ -105,33 +105,43 @@ class _WeatherInputState extends State<WeatherInput> {
     super.dispose();
   }
 
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        TextField(
-          controller: _controller,
-          decoration: const InputDecoration(hintText: 'Enter a city'),
-        ),
-        const SizedBox(height: 8.0),
-        Row(
-          children: [
-            Text(selectedDate != null ? '$selectedDate' : 'No date selected'),
-            const SizedBox(width: 16.0),
-            OutlinedButton(
-              onPressed: _selectDate,
-              child: const Text('Select Date'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16.0),
-        FilledButton.tonal(
-          onPressed: () {
+    return Container(
+      width: 320,
+      padding: const EdgeInsets.all(16),
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("Location", style: TextStyle(fontWeight: FontWeight.bold) ),
+              const SizedBox(height: 8),
+              TextField(decoration: InputDecoration(border: OutlineInputBorder()), controller: _controller,),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                  ),
+                  onPressed: () {
+
             widget.onFetchRequest(_controller.text, selectedDate!);
-          },
-          child: Text('Get Forecast'),
+                  },
+                  child: const Text("Get Forecast", style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
         ),
-      ],
+      ),
     );
   }
 }

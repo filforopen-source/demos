@@ -1,16 +1,58 @@
 #+title: Steps
 
-#+BEGIN_SRC shell
-flutter create --empty .
-#+END_SRC
+## Step 1
 
-#+BEGIN_SRC shell
+Create a Firebase project at console.firebase.google.com.
+
+Enable Firebase AI logic in the project
+
+## Step 2: Activate Cloud Shell
+
+Cloud Shell space is persistent between projects so make sure you are creating things in proper project directories.
+
+## Step 3: Creating the project
+
+Cloud shell needs to link to the stored version of Flutter so we need the following command before running `flutter`.
+
+#+BEGIN_EXAMPLE shell
+git config --global --add safe.directory /google/flutter
+#+END_EXAMPLE
+
+We'll be starting with an empty project and adding code as we go. Warning that this might take a little while on Cloud Shell.
+
+#+BEGIN_EXAMPLE shell
+flutter create --empty genui_workshop
+#+END_EXAMPLE
+
+Next we can attach our local code to the previously created project with `flutterfire`. We only need the web target.
+
+#+BEGIN_EXAMPLE shell
+dart pub global activate flutterfire_cli
+export PATH="$PATH":"$HOME/.pub-cache/bin"
+
+cd <project_directory>
+flutterfire configure
+;; Select the project you just created
+;; deselect all but web
+#+END_EXAMPLE
+
+#+BEGIN_EXAMPLE shell
 flutter pub add genui firebase_core firebase_ai json_schema_builder
-#+END_SRC
+#+END_EXAMPLE
 
-Set up a Firebase project section of genui codelab
+Let's run the app. 
 
-Create =genui_utils.dart=
+Cloud shell doesn't allow `flutter run -d chrome` by default so we will test it by building the web target and starting a server.
+#+BEGIN_EXAMPLE shell
+flutter build web
+cd build/web
+python -m http.server 8080
+
+#+END_EXAMPLE
+
+## Step 4: Setup GenUI scaffolding.
+
+Create =lib/genui_utils.dart=
 #+BEGIN_EXAMPLE dart
 sealed class ConversationItem {}
 
@@ -21,7 +63,7 @@ class TextItem extends ConversationItem {
 }
 #+END_EXAMPLE
 
-Add message_bubble.dart
+Create =lib/message_bubble.dart=.
 #+BEGIN_EXAMPLE dart
 import 'package:flutter/material.dart';
 
@@ -129,7 +171,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Just Today',
+      title: 'Weather Today',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       ),
@@ -256,8 +298,6 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 }
-
-
 #+END_EXAMPLE
 
 
@@ -286,7 +326,7 @@ Add the system instruction to =genui_utils.dart=.
 ''';
 #+END_EXAMPLE
 
-Test app
+Test app. It runs but doesn't really repsond.
 
 ** Integrate GenUI package
 Add the following to =genui_utils.dart=
@@ -344,7 +384,30 @@ class _MyHomePageState extends State<MyHomePage> {
   late final Catalog catalog;
 #+end_example
 
+RUN.
+
 Update =_addMessage= and =sendAndReceive= like in code lab.
+
+#+begin_example dart
+  Future<void> _addMessage() async {
+    final text = _textController.text;
+
+    if (text.trim().isEmpty) {
+      return;
+    }
+
+    _textController.clear();
+
+    setState(() {
+      _items.add(TextItem(text: text, isUser: true));
+    });
+
+    _scrollToBottom();
+
+    // Send the user's input through GenUI instead of directly to Firebase.
+    await _conversation.sendRequest(ChatMessage.user(text));
+  }
+#+end_example
 
 #+begin_example dart
   Future<void> _sendAndReceive(ChatMessage msg) async {
@@ -375,50 +438,73 @@ Update =_addMessage= and =sendAndReceive= like in code lab.
   }
 #+end_example
 
+TEST.
 
-GenUI now uses a surface to ask the user for data with fields for the location and date but clicking the Get Forecase button does nothing.
+### Actually wire up A2UI
 
-Modify the =_sendAndReceive= function to replace this
+Add to the end of initState.
 #+begin_example dart
- // Send the string to Firebase AI Logic.
-    final response = await _chatSession.sendMessage(Content.text(text));
+    // remove this line
+    //  _chatSession.sendMessage(Content.text(systemInstruction));
 
-    if (response.text?.isNotEmpty ?? false) {
-      // Feed the response back into GenUI's transportation layer
-      _transport.addChunk(response.text!);
-    }
+    // Initialize the GenUI Catalog.
+    // The genui package provides a default set of primitive widgets (like text
+    // and basic buttons) out of the box using this class.
+    catalog = BasicCatalogItems.asCatalog().copyWith(
+//      newItems: [weatherInput, weatherCard],
+    );
+
+    // Create a SurfaceController to manage the state of generated surfaces.
+    _controller = SurfaceController(catalogs: [catalog]);
+
+    // Create a transport adapter that will process messages to and from the
+    // agent, looking for A2UI messages.
+    _transport = A2uiTransportAdapter(onSend: _sendAndReceive);
+
+    // Link the transport and SurfaceController together in a Conversation,
+    // which provides your app a unified API for interacting with the agent.
+    _conversation = Conversation(
+      controller: _controller,
+      transport: _transport,
+    );
+
+    // Listen to GenUI stream events to update the UI
+    _conversation.events.listen((event) {
+      setState(() {
+        switch (event) {
+          case ConversationSurfaceAdded added:
+            _items.add(SurfaceItem(surfaceId: added.surfaceId));
+            _scrollToBottom();
+          case ConversationSurfaceRemoved removed:
+            _items.removeWhere(
+              (item) =>
+                  item is SurfaceItem && item.surfaceId == removed.surfaceId,
+            );
+          case ConversationContentReceived content:
+            _items.add(TextItem(text: content.text, isUser: false));
+            _scrollToBottom();
+          case ConversationError error:
+            debugPrint('GenUI Error: ${error.error}');
+          default:
+        }
+      });
+    });
+
+    // Create the system prompt for the agent, which will include this app's
+    // system instruction as well as the schema for the catalog.
+    final promptBuilder = PromptBuilder.chat(
+      catalog: catalog,
+      systemPromptFragments: [systemInstruction],
+    );
+
+    // Send the prompt into the Conversation, which will subsequently route it
+    // to Firebase using the transport mechanism.
+    _conversation.sendRequest(
+      ChatMessage.system(promptBuilder.systemPromptJoined()),
+    );
 #+end_example
 
-with the following
-#+begin_example dart
- // Check for an active surface
-    var id = _controller.activeSurfaceIds.lastOrNull;
-
-    // If a surface exists, pull the datamodel from the embedded surface
-    if (id != null) {
-        DataModel model = _controller.store.getDataModel(id)
-        var data = model.getValue(DataPath('/'));
-        userInputData = data;
-    }
-
-    // Send the string to Firebase AI Logic.
-    final response;
-    if (userInputData != null) {
-      response = await _chatSession.sendMessage(Content.text(userInputData.toString()));
-    } else {
-     response = await _chatSession.sendMessage(Content.text(text));
-    }
-    if (response.text?.isNotEmpty ?? false) {
-      // Feed the response back into GenUI's transportation layer
-      _transport.addChunk(response.text!);
-    }
-
-#+end_example
-
-This code looks at the last active surface, grabs the data model from it and sends it to GenUI for processing.
-
-GenUI is able to understand what to do with it.
-
+We could explore doing some progress indicator UI here or not.
 
 ** Make weather input widget
 The components it picks is random and can't be submitted sometimes
@@ -427,12 +513,360 @@ Create a =catalog= directory. One file per item with the schema included.
 
 Add the following to =catalog/weather_input.dart=
 #+begin_example dart
+import 'package:flutter/material.dart';
+import 'package:genui/genui.dart';
+import 'package:json_schema_builder/json_schema_builder.dart';
 
+final simpleWeatherSchema = S.object(
+  properties: {
+    'location': S.string(description: 'The location to check the weather.'),
+    'date': S.string(description: 'The date to check the weather.'),
+  },
+);
+
+// Example raw action
+//{version: v0.9, action: {name: submit_weather_request, sourceComponentId: submitButton,
+//timestamp: 2026-05-26T22:10:19.087, context: {}, surfaceId: weather_input_surface}}
+final weatherInput = CatalogItem(
+  name: 'WeatherInput',
+  dataSchema: simpleWeatherSchema,
+  widgetBuilder: (itemContext) {
+    final json = itemContext.data as Map<String, Object?>;
+    final data = SimpleWeatherData.fromJson(json);
+    return WeatherInput(
+      data: data,
+      onFetchRequest: (loc, date) async {
+        final JsonMap resolvedContext = await resolveContext(
+          itemContext.dataContext,
+          {'location': loc, 'date': date.toString()},
+        );
+        itemContext.dispatchEvent(
+          UserActionEvent(
+            name: 'submit_weather_request',
+            sourceComponentId: 'submitButton',
+            timestamp: DateTime.now(),
+            context: resolvedContext
+          ),
+        );
+      },
+    );
+  },
+);
+
+class SimpleWeatherData {
+  String location;
+  DateTime date;
+
+  SimpleWeatherData({required this.location, required this.date});
+
+  factory SimpleWeatherData.defaultValues() {
+    return SimpleWeatherData(location: 'Baltimore', date: DateTime.now());
+  }
+
+  factory SimpleWeatherData.fromJson(Map<String, Object?> json) {
+    if (json.isNotEmpty) {
+      return SimpleWeatherData(
+        location: json['location'] as String,
+        date: DateTime.parse(json['date'] as String),
+      );
+    } else {
+
+    return SimpleWeatherData(location: 'Baltimore', date: DateTime.now());
+    }
+  }
+}
+
+class WeatherInput extends StatefulWidget {
+  final SimpleWeatherData data;
+  final void Function(String, DateTime) onFetchRequest;
+
+  const WeatherInput({
+    super.key,
+    required this.data,
+    required this.onFetchRequest,
+  });
+
+  @override
+  State<WeatherInput> createState() => _WeatherInputState();
+}
+
+class _WeatherInputState extends State<WeatherInput> {
+  late TextEditingController _controller;
+  DateTime? selectedDate = DateTime.now();
+
+  Future<void> _selectDate() async {
+    final DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now().copyWith(month: 1, day: 1),
+      lastDate: DateTime.now().copyWith(month: 12, day: 31),
+    );
+
+    setState(() {
+      selectedDate = pickedDate;
+    });
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 320,
+      padding: const EdgeInsets.all(16),
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("Location", style: TextStyle(fontWeight: FontWeight.bold) ),
+              const SizedBox(height: 8),
+              TextField(decoration: InputDecoration(border: OutlineInputBorder()), controller: _controller,),
+              const SizedBox(height: 20),
+           /*   const Text("Date", style: TextStyle( fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+Row(
+          children: [
+            Text(selectedDate != null ? '$selectedDate' : 'No date selected'),
+            const SizedBox(width: 16.0),
+            IconButton(onPressed: _selectDate, icon: Icon(Icons.calendar_today_outlined),)
+
+          ],
+        ),*/
+             // const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                  ),
+                  onPressed: () {
+
+            widget.onFetchRequest(_controller.text, selectedDate!);
+                  },
+                  child: const Text("Get Forecast", style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+#+end_example
+- Add weatherInput as a new item in the basic catalog.
+- Change the system prompt to point it to the catalog item
+
+Add this to end of the system instruction prompt.
+#+begin_example dart
+
+  ## USER INTERFACE
+  * To request the location to retreive weather, create an instance of the WeatherInput
+  catalog item.
 #+end_example
 
+Test it.
 
-Then wire up events as a callback from the catalog input
+#+begin_example dart
+import 'package:flutter/material.dart';
+import 'package:genui_workshop/genui_utils.dart';
+import 'package:genui/genui.dart';
+import 'package:json_schema_builder/json_schema_builder.dart';
+import 'dart:io';
 
-** Next
-- Setup Dart function for retrieving weather.
-- Figure out another Firebase integration.
+import 'dart:convert';
+import 'fake_forecast.dart';
+
+final forecastSchema = S.object(
+  properties: {
+    'area_name': S.string(),
+    //"flags": S.object(),
+    'current_condition': S.object(
+      properties: {
+        "temp_C": S.number(),
+        "temp_F": S.number(),
+        "humidity": S.number(),
+        "observation_time": S.string(),
+      },
+    ),
+    'weatherDesc': S.string(),
+    'weatherIconUrl': S.string(),
+  },
+);
+
+final weatherCard = CatalogItem(
+  name: 'WeatherCard',
+  dataSchema: forecastSchema,
+  widgetBuilder: (itemContext) {
+    return WeatherCard(data: itemContext.data as Map<String, Object?>);
+  },
+);
+
+class WeatherCard extends StatelessWidget {
+  final Map<String, Object?> data;
+  const WeatherCard({super.key, required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final currentCondition = data["current_condition"] as Map<String, Object?>;
+    return Container(
+      width: 500,
+      padding: const EdgeInsets.all(20),
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: .end,
+                children: [
+                  Text(
+                    "Observed at ${currentCondition["observation_time"]}",
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // Header: Icon and City Name
+              Row(
+                children: [
+                  Image.network(
+                    data["weatherIconUrl"].toString(),
+                    errorBuilder: (context, err, trace) {
+                        return Icon(Icons.wb_sunny, size: 32,);
+                    },
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    data["area_name"].toString(),
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Temperature Display
+              Row(
+                children: [
+                  Text(
+                    currentCondition["temp_C"]!.toString(),
+                    style: TextStyle(fontSize: 56, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    "°C",
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Low Temp row
+              Row(
+                children: [
+                  const SizedBox(width: 16),
+                  Text(
+                    currentCondition['temp_F'].toString(),
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w500),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    "°F",
+                    style: TextStyle(fontSize: 20, color: Colors.grey),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Weather Condition
+              Text("${data['weatherDesc']}", style: TextStyle(fontSize: 22)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+#+end_example
+
+Create a file called =catalog/fake_forecast.dart=
+#+begin_example dart
+var fakeForecast = {
+  'area_name': 'Baltimore (Mount Clare)',
+  'current_condition': {
+    'temp_C': 22,
+    'temp_F': 72,
+    'humidity': 61,
+    'observation_time': '02:25 PM',
+  },
+  'weatherDesc': ' Sunny',
+  'weatherIconUrl':
+      'https://cdn.worldweatheronline.com/images/wsymbols01_png_64/wsymbol_0001_sunny.png',
+};
+#+end_example
+
+## Functions
+
+Good area to split to another tutorial.
+
+Create a file named =lib/tool_calls.dart=.
+
+#+begin_example dart
+import 'package:firebase_ai/firebase_ai.dart';
+
+final fetchWeatherGeocodeTool = FunctionDeclaration(
+  'fetchWeather',
+  'Retrieves the weather for the current date and returns geocoded location data',
+  parameters: {
+    'location': Schema.string(
+      description: 'The location for which to retrieve the weather',
+    ),
+    'date': Schema.string(
+      description:
+          'The date for which to retrieve the weather',
+    ),
+  },
+);
+#+end_example
+
+Add the import to the top of =main.dart=.
+#+begin_example dart
+import 'package:genui_workshop/tool_calls.dart';
+#+end_example
+
+Update the model in =initState= from main.dart to the following:
+#+begin_example dart
+final model = FirebaseAI.googleAI().generativeModel(
+      //model: 'gemini-3.5-flash',
+      model: 'gemini-3.1-flash-lite',
+      // tools that will call cloud functions
+      tools: [
+        Tool.functionDeclarations([fetchWeatherGeocodeTool]),
+      ],
+    );
+#+end_example
+
+....
+TBD

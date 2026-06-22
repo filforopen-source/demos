@@ -1,4 +1,0 @@
-.dart_tool/
-bin/server
-*.local
-.env
