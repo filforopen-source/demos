@@ -94,11 +94,16 @@ class PuzzleSolverState with ChangeNotifier {
     unawaited(solvePuzzle());
   }
 
-  Future<void> solvePuzzle({bool isResuming = false}) => _puzzleSolver.solve(
+  Future<void> solvePuzzle({
+    bool isResuming = false,
+    Future<String> Function(String clue, String proposedAnswer, String pattern)?
+    onConflict,
+  }) => _puzzleSolver.solve(
     this,
     _puzzleDataState,
     _geminiService,
     isResuming: isResuming,
+    onConflict: onConflict,
   );
 
   void resetSolution() {

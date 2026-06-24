@@ -13,6 +13,7 @@ import '../state/app_step_state.dart';
 import '../state/puzzle_data_state.dart';
 import '../state/puzzle_solver_state.dart';
 import '../styles.dart';
+import 'conflict_dialog.dart';
 import 'grid_view.dart';
 import 'step_activation_mixin.dart';
 import 'todo_list_widget.dart';
@@ -41,7 +42,12 @@ class _StepFiveSolvePuzzleState extends State<StepFiveSolvePuzzle>
     // Start solving only if we are not already solving and there are todos.
     if (!puzzleSolverState.isSolving &&
         puzzleSolverState.todos.any((t) => t.status != TodoStatus.done)) {
-      unawaited(puzzleSolverState.solvePuzzle());
+      unawaited(
+        puzzleSolverState.solvePuzzle(
+          onConflict: (clue, proposedAnswer, pattern) =>
+              _showConflictDialog(context, clue, proposedAnswer, pattern),
+        ),
+      );
     }
   }
 
@@ -101,6 +107,24 @@ class _StepFiveSolvePuzzleState extends State<StepFiveSolvePuzzle>
     );
   }
 
+  Future<String> _showConflictDialog(
+    BuildContext context,
+    String clue,
+    String proposedAnswer,
+    String pattern,
+  ) async {
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ConflictDialog(
+        clue: clue,
+        pattern: pattern,
+        proposedAnswer: proposedAnswer,
+      ),
+    );
+    return result ?? proposedAnswer;
+  }
+
   @override
   Widget build(BuildContext context) {
     final puzzleDataState = Provider.of<PuzzleDataState>(context);
@@ -134,7 +158,7 @@ class _StepFiveSolvePuzzleState extends State<StepFiveSolvePuzzle>
                         (t) => t.status != TodoStatus.done,
                       ))
                     ElevatedButton(
-                      onPressed: puzzleSolverState.resumeSolving,
+                      onPressed: () => puzzleSolverState.resumeSolving(),
                       child: const Text('Resume'),
                     ),
                   ElevatedButton(

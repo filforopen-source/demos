@@ -15,6 +15,8 @@ class PuzzleSolver {
     PuzzleDataState dataState,
     GeminiService geminiService, {
     bool isResuming = false,
+    Future<String> Function(String clue, String proposedAnswer, String pattern)?
+    onConflict,
   }) async {
     assert(
       solverState.todos.isNotEmpty,
@@ -47,6 +49,7 @@ class PuzzleSolver {
           clue,
           expectedLength,
           pattern,
+          onConflict: onConflict,
         );
 
         if (!solverState.isSolving) break;
