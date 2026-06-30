@@ -5,7 +5,7 @@
 [Firebase AI Logic](https://firebase.google.com/docs/ai-logic)
 
 ![Flutter & Firebase AI Sample App Mobile Screenshots](README/flutter_firebase_ai_sample_hero.png)
-
+**Tech Stack:** [Flutter](https://flutter.dev/) (end frontend), 
 This Flutter application demonstrates Firebase AI Logic capabilities through a 
 series of interactive demos. Firebase AI Logic provides access to the Gemini and 
 Imagen family of models, enabling developers to build AI-powered experiences in 
