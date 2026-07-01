@@ -27,7 +27,7 @@ import 'package:firebase_ai/firebase_ai.dart';
 /// generation capabilities.
 class ImageGenerationService {
   final _model = FirebaseAI.googleAI().generativeModel(
-    model: 'gemini-2.5-flash-image-preview',
+    model: 'gemini-3.1-flash-image-preview',
     generationConfig: GenerationConfig(
       responseModalities: [ResponseModalities.image],
     ),

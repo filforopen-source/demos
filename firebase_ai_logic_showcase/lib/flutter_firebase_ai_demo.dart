@@ -27,27 +27,28 @@ class DemoHomeScreen extends StatefulWidget {
 
 class _DemoHomeScreenState extends State<DemoHomeScreen> {
   int _selectedIndex = 0;
-  final List<({Widget icon, String label, Widget? selectedIcon})> destinations =
-      [
-        (icon: const Icon(Icons.chat), label: 'Chat', selectedIcon: null),
+  final List<({Widget icon, String label, Widget? selectedIcon})>
+  destinations = [
+    (icon: const Icon(Icons.chat), label: 'Chat', selectedIcon: null),
+    /* TODO: This demo should remain inactive until Appcheck is enforced by default @cynthiajoan
         (
           icon: const Icon(Icons.video_chat),
           label: 'Live API',
           selectedIcon: null,
-        ),
-        (
-          icon: const Icon(Icons.photo_library),
-          label: 'Multimodal',
-          selectedIcon: null,
-        ),
-        (
-          icon: RichText(
-            text: const TextSpan(style: TextStyle(fontSize: 24.0), text: '🍌'),
-          ),
-          label: 'Nano Banana',
-          selectedIcon: null,
-        ),
-      ];
+        ),*/
+    (
+      icon: const Icon(Icons.photo_library),
+      label: 'Multimodal',
+      selectedIcon: null,
+    ),
+    (
+      icon: RichText(
+        text: const TextSpan(style: TextStyle(fontSize: 24.0), text: '🍌'),
+      ),
+      label: 'Nano Banana',
+      selectedIcon: null,
+    ),
+  ];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -59,31 +60,21 @@ class _DemoHomeScreenState extends State<DemoHomeScreen> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < 600) {
-          // Use BottomNavigationBar for smaller screens
-          return Scaffold(
-            body: demoPages[_selectedIndex],
-            bottomNavigationBar: BottomNavigationBar(
-              type: BottomNavigationBarType.fixed,
-              items: destinations
-                  .map(
-                    (e) => BottomNavigationBarItem(
-                      icon: e.icon,
-                      label: e.label,
-                      activeIcon: e.selectedIcon,
-                    ),
-                  )
-                  .toList(),
-              currentIndex: _selectedIndex,
-              onTap: _onItemTapped,
-            ),
-          );
-        } else {
-          // Use NavigationRail for larger screens
-          return Scaffold(
-            body: Row(
-              children: <Widget>[
+        return Scaffold(
+          body: Row(
+            children: <Widget>[
+              if (constraints.maxWidth >
+                  600) // Show NavigationRail on Medium or larger screens
+              ...[
                 NavigationRail(
+                  leading: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Image.asset(
+                      'assets/firebase-ai-logic.png',
+                      width: 45,
+                      height: 45,
+                    ),
+                  ),
                   selectedIndex: _selectedIndex,
                   onDestinationSelected: _onItemTapped,
                   labelType: NavigationRailLabelType.all,
@@ -101,12 +92,30 @@ class _DemoHomeScreenState extends State<DemoHomeScreen> {
                       )
                       .toList(),
                 ),
-                const VerticalDivider(thickness: 1, width: 1),
-                Expanded(child: demoPages[_selectedIndex]),
+                VerticalDivider(thickness: 1, width: 1),
               ],
-            ),
-          );
-        }
+              Expanded(child: demoPages[_selectedIndex]),
+            ],
+          ),
+          bottomNavigationBar:
+              (constraints.maxWidth <
+                  600) // Show navigation bar on smaller screens
+              ? BottomNavigationBar(
+                  type: BottomNavigationBarType.fixed,
+                  items: destinations
+                      .map(
+                        (e) => BottomNavigationBarItem(
+                          icon: e.icon,
+                          label: e.label,
+                          activeIcon: e.selectedIcon,
+                        ),
+                      )
+                      .toList(),
+                  currentIndex: _selectedIndex,
+                  onTap: _onItemTapped,
+                )
+              : null,
+        );
       },
     );
   }
@@ -114,7 +123,7 @@ class _DemoHomeScreenState extends State<DemoHomeScreen> {
 
 final List<Widget> demoPages = <Widget>[
   const ChatDemo(),
-  LiveAPIDemo(),
+  // TODO: This demo should remain inactive until Appcheck is enforced by default @cynthiajoan LiveAPIDemo(),
   const MultimodalDemo(),
   ChatDemoNano(),
 ];

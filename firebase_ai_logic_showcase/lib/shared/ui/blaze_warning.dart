@@ -40,10 +40,7 @@ class BlazeWarning extends StatelessWidget {
               ),
               TextSpan(text: '.'),
               TextSpan(text: '\n\n'),
-              TextSpan(
-                text:
-                    'Eligible developers can claim ',
-              ),
+              TextSpan(text: 'Eligible developers can claim '),
               WidgetSpan(
                 baseline: TextBaseline.ideographic,
                 alignment: PlaceholderAlignment.top,

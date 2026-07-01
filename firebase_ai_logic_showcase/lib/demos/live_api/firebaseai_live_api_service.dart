@@ -51,9 +51,9 @@ class LiveApiService {
   final LiveGenerativeModel
   _liveModel = FirebaseAI.googleAI().liveGenerativeModel(
     systemInstruction: Content.text(
-      'You are a helpful assisant. If you have a tool to help the user, please use it.',
+      'You are a helpful assistant. If you have a tool to help the user, please use it.',
     ),
-    model: 'gemini-2.0-flash-live-001',
+    model: 'gemini-2.5-flash-native-audio-preview-12-2025',
     liveGenerationConfig: LiveGenerationConfig(
       speechConfig: SpeechConfig(voiceName: 'fenrir'),
       responseModalities: [ResponseModalities.audio],

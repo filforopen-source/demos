@@ -33,7 +33,7 @@ flutter run -d chrome --release --dart-define=FLUTTER_WEB_USE_SKIA=true
 ## Running JSON code generator
 
 ```
-flutter pub run grinder generate
+dart run grinder generate
 ```
 
 ## Add Firebase

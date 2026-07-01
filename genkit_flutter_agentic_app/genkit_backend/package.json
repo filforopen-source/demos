@@ -22,6 +22,6 @@
   "type": "module",
   "devDependencies": {
     "@types/data-urls": "^3.0.4",
-    "genkit-cli": "^1.0.5"
+    "genkit-cli": "^1.26.0"
   }
 }

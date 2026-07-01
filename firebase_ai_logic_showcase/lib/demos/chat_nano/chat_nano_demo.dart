@@ -22,14 +22,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../shared/ui/app_frame.dart';
 import '../../shared/ui/app_spacing.dart';
+import '../../shared/ui/blaze_warning.dart';
 import '../../shared/ui/chat_components/ui_components.dart';
 import '../../shared/chat_service.dart';
-import '../../shared/ui/chat_components/model_picker.dart';
 import '../../shared/models/models.dart';
 
 class ChatDemoNano extends ConsumerStatefulWidget {
-  const ChatDemoNano({super.key, this.isSelected = false});
-  final bool isSelected;
+  const ChatDemoNano({super.key});
 
   @override
   ConsumerState<ChatDemoNano> createState() => ChatDemoNanoState();
@@ -47,33 +46,25 @@ class ChatDemoNanoState extends ConsumerState<ChatDemoNano> {
   final ScrollController _scrollController = ScrollController();
   bool _loading = false;
   OverlayPortalController opController = OverlayPortalController();
-  static bool _pickerHasBeenShown = false;
+  static bool _warningHasBeenShown = false;
 
   @override
   void initState() {
     super.initState();
     _chatService = ChatService(ref);
-    geminiModels.selectModel('gemini-2.5-flash-image-preview');
+    geminiModels.selectModel('gemini-3-pro-image-preview');
     _chatService.init();
     _userTextInputController.text =
         'Hot air balloons rising over the San Francisco Bay at golden hour with a view of the Golden Gate Bridge. Make it anime style.';
-    _checkAndShowPicker();
+    _checkAndShowBlazeWarning();
   }
 
-  @override
-  void didUpdateWidget(ChatDemoNano oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isSelected != oldWidget.isSelected) {
-      _checkAndShowPicker();
-    }
-  }
-
-  void _checkAndShowPicker() {
-    if (widget.isSelected && !_pickerHasBeenShown) {
-      _pickerHasBeenShown = true;
+  void _checkAndShowBlazeWarning() {
+    if (!_warningHasBeenShown) {
+      _warningHasBeenShown = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          showModelPicker();
+          showBlazeWarning();
         }
       });
     }
@@ -182,20 +173,22 @@ class ChatDemoNanoState extends ConsumerState<ChatDemoNano> {
     }
   }
 
-  void showModelPicker() {
+  void showBlazeWarning() {
     showDialog(
       context: context,
       builder: (context) {
-        return ModelPicker(
-          selectedModel: geminiModels.selectedModel,
-          onSelected: (value) {
-            _chatService.changeModel(value);
-            setState(() {
-              _userTextInputController.text =
-                  geminiModels.selectedModel.defaultPrompt;
-              _messages.clear();
-            });
-          },
+        return Dialog(
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: 600),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.s16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [BlazeWarning()],
+              ),
+            ),
+          ),
         );
       },
     );
