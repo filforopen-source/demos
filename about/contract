@@ -1,30 +1,4 @@
-# My Packing List: Pack Smarter, Not Harder.
 
-## Tech Stack
-Frontend: [Flutter](https://flutter.dev/)
-Backend: [Genkit](https://firebase.google.com/docs/genkit), [Node.js](https://nodejs.org/en/), [Express](https://expressjs.com/), [Gemini 2.0 Flash](https://ai.google.dev/gemini-api/docs/models#gemini-2.0-flash)
-APIs: [OpenWeather](https://openweathermap.org/), [Unsplash](https://unsplash.com/developers)
-
-![My Packing List Screenshots](README/my-packing-list-screenshots.png)
-
-Stressed about packing? Forget essentials? Wish someone could just do it for you?
-Say hello to My Packing List!
-
-Tell the app:
-- Where you're going.
-- How long you'll be there.
-- Any attire needs (like "business formal" or "beach casual").
-
-The smart agentic app fetches the latest weather forecast for your destination 
-and generates a personalized packing list tailored precisely to your trip!
-
-But wait, there's more!
-- Interactive Checklist: Easily track what you already have packed.
-- One-Tap Shopping: Missing a few items? Tap the "Buy Missing Items" button, and 
-  the agentic app handles the shopping for you! (Note: This demo simulates the 
-  shopping bit. Sorry, you won’t be getting any Hawaiian shirts.)
-
-# Getting Started
 
 ## Dev Environment
 - [Flutter](https://docs.flutter.dev/get-started/install) for your target platforms
